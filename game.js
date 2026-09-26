@@ -1,45 +1,34 @@
 let socket;
 let myId;
-let myNickname = "Guest";
+let myNickname = "Player";
 let currentHp = 100;
 let kills = 0;
 const remotePlayers = {};
 const localBullets = [];
+const gameWalls = []; // Массив хитбоксов для коллизий
 
-// Сетевые селекторы меню
+// Элементы меню
 const googleLoginBtn = document.getElementById('googleLoginBtn');
 const connectBtn = document.getElementById('connectBtn');
 const authStatus = document.getElementById('auth-status');
 const userInfo = document.getElementById('user-info');
 const usernameDisplay = document.getElementById('username-display');
 
-// Логика работы с аккаунтом Google (Firebase)
+// Google Auth логгер (Firebase)
 if (googleLoginBtn) {
     googleLoginBtn.addEventListener('click', () => {
         const provider = new firebase.auth.GoogleAuthProvider();
-        firebase.auth().signInWithPopup(provider)
-            .then((result) => {
-                const user = result.user;
-                myNickname = user.displayName || "User_" + Math.floor(Math.random()*1000);
-                localStorage.setItem('cs1001_nick', myNickname);
-                updateAuthUI(true);
-            })
-            .catch((error) => {
-                console.error("Auth Error: ", error);
-                authStatus.innerText = "Auth Failed!";
-            });
+        firebase.auth().signInWithPopup(provider).then((result) => {
+            myNickname = result.user.displayName || "User_" + Math.floor(Math.random()*1000);
+            localStorage.setItem('cs1001_nick', myNickname);
+            updateAuthUI(true);
+        }).catch(() => { if(authStatus) authStatus.innerText = "Auth Failed!"; });
     });
 }
 
-// Проверка сохраненного входа при старте
 firebase.auth().onAuthStateChanged((user) => {
-    if (user) {
-        myNickname = user.displayName;
-        localStorage.setItem('cs1001_nick', myNickname);
-        updateAuthUI(true);
-    } else {
-        updateAuthUI(false);
-    }
+    if (user) { myNickname = user.displayName; updateAuthUI(true); }
+    else { updateAuthUI(false); }
 });
 
 function updateAuthUI(isAuth) {
@@ -57,67 +46,99 @@ function updateAuthUI(isAuth) {
     }
 }
 
-// Инициализация 3D сцены Three.js
+// 1. Инициализация продвинутой 3D графики
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x0f0f14);
-scene.fog = new THREE.FogExp2(0x0f0f14, 0.04);
+scene.background = new THREE.Color(0xd6af7b); // Песочное небо в стиле Dust 2
+scene.fog = new THREE.FogExp2(0xd6af7b, 0.02);
 
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-scene.add(new THREE.AmbientLight(0xffffff, 0.5));
-const light = new THREE.DirectionalLight(0xffffff, 0.8);
-light.position.set(20, 40, 20);
-scene.add(light);
+// Реалистичный свет
+scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+const sunLight = new THREE.DirectionalLight(0xfff5e6, 1.2);
+sunLight.position.set(30, 50, 20);
+scene.add(sunLight);
 
-// Арена (Пол)
-const floorGeo = new THREE.PlaneGeometry(120, 120);
-const floorMat = new THREE.MeshLambertMaterial({ color: 0x252525 });
+// Текстурированная песчаная земля (Плент / Длина)
+const floorGeo = new THREE.PlaneGeometry(200, 200);
+const floorMat = new THREE.MeshLambertMaterial({ color: 0xc2a678 }); 
 const floor = new THREE.Mesh(floorGeo, floorMat);
 floor.rotation.x = -Math.PI / 2;
 scene.add(floor);
 
-// --- Функция создания 3D-стен (Майнкрафт-стиль) ---
-function createWall(x, z, width, depth, height = 3) {
-    const wallGeo = new THREE.BoxGeometry(width, height, depth);
-    const wallMat = new THREE.MeshLambertMaterial({ color: 0x555566 }); // Серый бетон
-    const wall = new THREE.Mesh(wallGeo, wallMat);
-    wall.position.set(x, height / 2, z);
-    scene.add(wall);
+// 2. Механика постройки карты а-ля Dust 2 (Укрытия, Ящики, Зигзаг, Коробка)
+function buildCSWall(x, z, w, d, h = 4, color = 0xbda47e) {
+    const geo = new THREE.BoxGeometry(w, h, d);
+    const mat = new THREE.MeshLambertMaterial({ color: color });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(x, h / 2, z);
+    scene.add(mesh);
+
+    // Добавляем хитбокс в физику игры
+    gameWalls.push({
+        minX: x - w/2, maxX: x + w/2,
+        minZ: z - d/2, maxZ: z + d/2
+    });
 }
 
-// Постройка препятствий и укрытий на карте
-createWall(-10, 0, 2, 15);  // Длинная стена слева
-createWall(10, 5, 2, 10);   // Стена справа
-createWall(0, -15, 20, 2);  // Заднее укрытие
-createWall(0, 15, 12, 2);   // Центральный блок
-createWall(-20, -20, 4, 4); // Квадратный блок 1
-createWall(20, 20, 4, 4);   // Квадратный block 2
+// Длина и Зигзаг (Dust 2 А-Плент Стайл)
+buildCSWall(-25, 0, 4, 60, 6);   // Огромная стена Длины (Левая сторона)
+buildCSWall(25, -20, 4, 40, 6);  // Правая стена Длины
+buildCSWall(0, -40, 50, 4, 6);   // Стена Корнера (Поворот на зиг)
+buildCSWall(0, 20, 20, 4, 4);    // Центральный парапет
+buildCSWall(15, 30, 4, 20, 4);   // Проход на Зиг
 
-// Защитный забор по периметру карты (чтобы не выпасть во вселенную)
-createWall(0, -60, 120, 2, 5); // Север
-createWall(0, 60, 120, 2, 5);  // Юг
-createWall(-60, 0, 2, 120, 5); // Запад
-createWall(60, 0, 2, 120, 5);  // Восток
+// Легендарные Ящики КС (Укрытия на А-Пленте)
+buildCSWall(-5, -5, 3, 3, 3, 0x8a6d45);  // Двойной ящик на длине
+buildCSWall(-5, -5, 3, 3, 1.5, 0x8a6d45); 
+buildCSWall(8, -15, 2.5, 2.5, 2.5, 0x735c3c); // Ящик на просвете
+buildCSWall(-12, 10, 3, 3, 3, 0x8a6d45); // Ящик на гусе
 
-// Модель оружия игрока
+// Ограничительные стены вокруг всей карты
+buildCSWall(0, -100, 200, 4, 10);
+buildCSWall(0, 100, 200, 4, 10);
+buildCSWall(-100, 0, 4, 200, 10);
+buildCSWall(100, 0, 4, 200, 10);
+
+// 3. Создание реалистичной 3D-модели автомата в руках (Кастомный автомат)
 const gunHolder = new THREE.Group();
-const gunBarrel = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.7), new THREE.MeshLambertMaterial({ color: 0x777777 }));
-gunBarrel.position.set(0.2, -0.25, -0.4);
-gunHolder.add(gunBarrel);
+
+// Ствол автомата
+const barrelGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.6);
+const barrelMat = new THREE.MeshLambertMaterial({ color: 0x222222 });
+const barrel = new THREE.Mesh(barrelGeo, barrelMat);
+barrel.rotation.x = Math.PI / 2;
+barrel.position.set(0.2, -0.25, -0.6);
+gunHolder.add(barrel);
+
+// Ствольная коробка и приклад (Корпус автомата)
+const bodyGeo = new THREE.BoxGeometry(0.07, 0.09, 0.4);
+const bodyMat = new THREE.MeshLambertMaterial({ color: 0x333333 });
+const gunBody = new THREE.Mesh(bodyGeo, bodyMat);
+gunBody.position.set(0.2, -0.25, -0.3);
+gunHolder.add(gunBody);
+
+// Магазин (Рожок автомата)
+const magGeo = new THREE.BoxGeometry(0.04, 0.18, 0.08);
+const magMat = new THREE.MeshLambertMaterial({ color: 0x1a1a1a });
+const clip = new THREE.Mesh(magGeo, magMat);
+clip.position.set(0.2, -0.35, -0.35);
+clip.rotation.x = 0.2;
+gunHolder.add(clip);
+
 scene.add(gunHolder);
 
-camera.position.set(Math.random() * 20 - 10, 1.6, Math.random() * 20 - 10);
+camera.position.set(0, 1.8, 40); // Спавн в конце Длины
 
-// Подключение к игровому матчу
+// Кнопка В БОЙ
 if (connectBtn) {
     connectBtn.addEventListener('click', () => {
         const serverUrl = document.getElementById('serverSelect').value;
         const skinColor = parseInt(document.getElementById('weaponSkin').value);
-        
-        gunBarrel.material.color.setHex(skinColor);
+        barrel.material.color.setHex(skinColor); // Красим ствол в выбранный скин!
 
         document.getElementById('menu').style.display = 'none';
         document.getElementById('crosshair').style.display = 'block';
@@ -129,14 +150,14 @@ if (connectBtn) {
     });
 }
 
-// Управление камерой (Мышь) и WASD
+// 4. Управление и обзоры (Pointer Lock)
 let yaw = 0, pitch = 0;
 let move = { forward: false, backward: false, left: false, right: false };
 
 document.addEventListener('mousemove', (e) => {
     if (document.pointerLockElement === document.body) {
-        yaw -= e.movementX * 0.002;
-        pitch -= e.movementY * 0.002;
+        yaw -= e.movementX * 0.0025;
+        pitch -= e.movementY * 0.0025;
         pitch = Math.max(-Math.PI/2.2, Math.min(Math.PI/2.2, pitch));
         camera.rotation.order = "YXZ";
         camera.rotation.y = yaw; camera.rotation.x = pitch;
@@ -156,23 +177,29 @@ window.addEventListener('keyup', (e) => {
     if (e.code === 'KeyD') move.right = false;
 });
 
-// Клик ЛКМ — СТРЕЛЬБА
+// Стрельба (ЛКМ) + Синхронный Неоновый Трейсер
 window.addEventListener('mousedown', (e) => {
     if (document.pointerLockElement !== document.body || currentHp <= 0) return;
-    if (e.button === 0) { // Левая кнопка мыши
-        shootWeapon();
-    }
+    if (e.button === 0) shootCSWeapon();
 });
 
-function shootWeapon() {
+function shootCSWeapon() {
     const dir = new THREE.Vector3();
     camera.getWorldDirection(dir);
+
+    // Добавляем легкий разброс патронов (как в КС при спрее)
+    dir.x += (Math.random() - 0.5) * 0.015;
+    dir.y += (Math.random() - 0.5) * 0.015;
+
     const origin = camera.position.clone();
+    origin.y -= 0.2; // Вылет пули на уровне оружия
 
-    // Создаем визуальный патрон локально (Желтый)
-    createVisualBullet(origin, dir, 0xffff00);
+    // Локальный трассирующий лазерный патрон
+    createVisualBullet(origin, dir, 0x00ffff);
 
-    // Отправляем выстрел на сервер
+    // Звуковой эффект выстрела с помощью встроенного синтезатора частот
+    playShootSound();
+
     if (socket && socket.connected) {
         socket.emit('playerShoot', {
             origin: { x: origin.x, y: origin.y, z: origin.z },
@@ -182,32 +209,50 @@ function shootWeapon() {
 }
 
 function createVisualBullet(origin, dir, colorHex) {
-    const geo = new THREE.SphereGeometry(0.08, 6, 6);
+    const geo = new THREE.CylinderGeometry(0.015, 0.015, 0.6);
     const mat = new THREE.MeshBasicMaterial({ color: colorHex });
     const mesh = new THREE.Mesh(geo, mat);
+    
     mesh.position.copy(origin);
+    mesh.lookAt(origin.clone().add(dir));
+    mesh.rotation.x += Math.PI / 2;
+    
     scene.add(mesh);
-    localBullets.push({ mesh: mesh, dir: dir.clone(), life: 60 });
+    localBullets.push({ mesh: mesh, dir: dir.clone(), life: 40 });
 }
 
-// Сетевая синхронизация Socket.io
+function playShootSound() {
+    try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(350, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.1);
+    } catch(e) {}
+}
+
+// 5. Сетевой движок Socket.io
 function initNetwork(url) {
     socket = io(url);
-
     socket.on('connect', () => {
         myId = socket.id;
         socket.emit('joinGame', { name: myNickname, x: camera.position.x, z: camera.position.z, ry: camera.rotation.y });
     });
 
-    // Отрисовка трейсеров от других игроков (Красные патроны)
     socket.on('enemyShoot', (data) => {
         if (data.id === myId) return;
         const origin = new THREE.Vector3(data.origin.x, data.origin.y, data.origin.z);
         const dir = new THREE.Vector3(data.dir.x, data.dir.y, data.dir.z);
-        createVisualBullet(origin, dir, 0xff0055);
+        createVisualBullet(origin, dir, 0xff3300); // Пули врагов — красные трейсеры
     });
 
-    // Обновление состояния всех игроков с сервера
     socket.on('serverUpdate', (serverPlayers) => {
         for (let id in serverPlayers) {
             if (id === myId) {
@@ -217,60 +262,9 @@ function initNetwork(url) {
                 document.getElementById('hud-kills').innerText = kills;
 
                 if (currentHp <= 0) {
-                    camera.position.set(Math.random() * 40 - 20, 1.6, Math.random() * 40 - 20);
+                    camera.position.set(Math.random() * 20 - 10, 1.8, 40);
                     socket.emit('respawn');
                 }
                 continue;
             }
 
-            const pData = serverPlayers[id];
-
-            if (!remotePlayers[id]) {
-                const group = new THREE.Group();
-                const body = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 1.7, 8), new THREE.MeshLambertMaterial({ color: 0x0066ff }));
-                body.position.y = 0.85;
-                group.add(body);
-                scene.add(group);
-                remotePlayers[id] = group;
-            }
-
-            remotePlayers[id].position.set(pData.x, 0, pData.z);
-            remotePlayers[id].rotation.y = pData.ry;
-        }
-
-        for (let id in remotePlayers) {
-            if (!serverPlayers[id]) {
-                scene.remove(remotePlayers[id]);
-                delete remotePlayers[id];
-            }
-        }
-    });
-}
-
-const speed = 0.12;
-function animate() {
-    requestAnimationFrame(animate);
-
-    if (document.pointerLockElement === document.body && currentHp > 0) {
-        const front = new THREE.Vector3(); camera.getWorldDirection(front); front.y = 0; front.normalize();
-        const side = new THREE.Vector3(-front.z, 0, front.x);
-
-        if (move.forward) camera.position.addScaledVector(front, speed);
-        if (move.backward) camera.position.addScaledVector(front, -speed);
-        if (move.left) camera.position.addScaledVector(side, -speed);
-        if (move.right) camera.position.addScaledVector(side, speed);
-
-        // Ограничение карты
-        camera.position.x = Math.max(-58, Math.min(58, camera.position.x));
-        camera.position.z = Math.max(-58, Math.min(58, camera.position.z));
-    }
-
-    gunHolder.position.copy(camera.position);
-    gunHolder.rotation.copy(camera.rotation);
-
-    // Полет патронов
-    for (let i = localBullets.length - 1; i >= 0; i--) {
-        const b = localBullets[i];
-        b.mesh.position.addScaledVector(b.dir, 0.9);
-        b.life--;
-        if (b.life <= 0) {

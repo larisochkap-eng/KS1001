@@ -2,131 +2,263 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CS 1001 - Online Shooter</title>
+    <title>CS 1001 - Main Menu</title>
     <style>
         body { 
             margin: 0; 
             overflow: hidden; 
-            background-color: #111; 
-            font-family: 'Arial', sans-serif; 
+            background: #0b0c10; 
+            font-family: 'Stratum2', 'Arial Black', sans-serif; 
             color: white; 
+            user-select: none;
         }
+        
+        /* Задний фон лобби (Песчаный градиент в стиле Dust 2) */
         #menu {
             position: absolute; 
             width: 100%; 
             height: 100%; 
-            background: rgba(20, 20, 20, 0.95);
+            background: radial-gradient(circle at center, rgba(194, 166, 120, 0.15) 0%, rgba(11, 12, 16, 0.98) 70%), url('https://unsplash.com') no-repeat center center;
+            background-size: cover;
             display: flex; 
             flex-direction: column; 
-            align-items: center; 
+            align-items: flex-start; 
             justify-content: center; 
             z-index: 100;
+            padding-left: 80px;
+            box-sizing: border-box;
         }
-        .menu-block { 
-            background: #222; 
-            padding: 20px; 
-            border-radius: 10px; 
-            border: 2px solid #e0a905; 
-            margin: 10px; 
-            width: 300px; 
-            text-align: center; 
+
+        /* Логотип Игры в стиле Counter-Strike */
+        .logo-area {
+            margin-bottom: 40px;
         }
         h1 { 
-            color: #e0a905; 
-            text-shadow: 3px 3px 0px #000; 
-            font-size: 42px; 
-            margin-bottom: 5px; 
+            color: #de9b35; 
+            font-size: 64px; 
+            margin: 0; 
+            letter-spacing: 4px;
+            text-shadow: 3px 3px 0px #000, 0 0 20px rgba(222, 155, 53, 0.4);
+            font-weight: 900;
         }
-        input, select, button { 
+        .subtitle {
+            color: #888;
+            margin: 5px 0 0 5px;
+            font-size: 14px;
+            letter-spacing: 6px;
+            font-weight: bold;
+        }
+
+        /* Главная левая панель управления (как в CS) */
+        .cs-panel {
+            background: rgba(20, 22, 28, 0.75);
+            padding: 30px;
+            border-radius: 4px;
+            border-left: 5px solid #de9b35;
+            width: 380px;
+            box-shadow: 5px 5px 25px rgba(0,0,0,0.8);
+            backdrop-filter: blur(10px);
+        }
+
+        h3 {
+            color: #de9b35;
+            margin: 0 0 15px 0;
+            font-size: 18px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 5px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        label {
+            display: block;
+            color: #aaa;
+            font-size: 12px;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+            letter-spacing: 1px;
+        }
+
+        select { 
             width: 100%; 
-            padding: 10px; 
-            margin: 8px 0; 
-            border-radius: 5px; 
-            border: none; 
-            font-size: 16px; 
-            box-sizing: border-box; 
+            padding: 12px; 
+            border-radius: 3px; 
+            border: 1px solid #444; 
+            background: #14161c; 
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            outline: none;
+            transition: border-color 0.2s;
         }
-        input, select { 
-            background: #333; 
+        select:focus {
+            border-color: #de9b35;
+        }
+        
+        /* Кнопки авторизации и старта */
+        button {
+            width: 100%;
+            padding: 14px;
+            border-radius: 3px;
+            border: none;
+            font-size: 16px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .google-btn { 
+            background: #3a3f50; 
             color: white; 
-            border: 1px solid #555; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            gap: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #555;
         }
-        button { 
-            background: #5c8e32; 
-            color: white; 
-            font-weight: bold; 
-            cursor: pointer; 
-            transition: 0.2s; 
+        .google-btn:hover { background: #4a5166; border-color: #de9b35; }
+        
+        #connectBtn { 
+            background: linear-gradient(180deg, #de9b35 0%, #b87a1d 100%); 
+            color: black; 
+            font-size: 22px; 
+            margin-top: 10px;
+            box-shadow: 0 4px 15px rgba(222, 155, 53, 0.3);
+            text-shadow: 0 1px 0 rgba(255,255,255,0.2);
         }
-        button:hover { 
-            background: #73b23e; 
+        #connectBtn:disabled { 
+            background: #2a2c33; 
+            color: #555; 
+            cursor: not-allowed; 
+            box-shadow: none;
+            text-shadow: none;
         }
-        #crosshair {
-            position: absolute; 
-            top: 50%; 
-            left: 50%; 
-            width: 12px; 
-            height: 12px;
-            border: 2px solid #00ff00; 
-            border-radius: 50%; 
-            transform: translate(-50%, -50%);
-            pointer-events: none; 
-            z-index: 10; 
-            display: none;
+        #connectBtn:not(:disabled):hover { 
+            background: linear-gradient(180deg, #f0ad4e 0%, #de9b35 100%);
+            transform: translateY(-1px);
         }
+        
+        #auth-status { margin-top: 5px; font-size: 12px; color: #888; text-align: center; }
+        #user-info { display: none; margin-bottom: 15px; font-size: 16px; color: #5cb85c; font-weight: bold; text-align: center; }
+        
+        /* Игровой интерфейс (HUD как в Counter-Strike) */
+        #crosshair { 
+            position: absolute; top: 50%; left: 50%; 
+            width: 14px; height: 14px; 
+            transform: translate(-50%, -50%); 
+            pointer-events: none; z-index: 10; display: none; 
+        }
+        #crosshair::before, #crosshair::after {
+            content: ''; position: absolute; background: #00ff00;
+        }
+        /* Рисуем классический зеленый перекрестный прицел КС */
+        #crosshair::before { top: 6px; left: 0; width: 14px; height: 2px; }
+        #crosshair::after { top: 0; left: 6px; width: 2px; height: 14px; }
+
         #hud { 
-            position: absolute; 
-            top: 20px; 
-            left: 20px; 
-            font-size: 20px; 
-            font-weight: bold; 
-            z-index: 10; 
-            display: none; 
-            pointer-events: none; 
+            position: absolute; bottom: 40px; left: 50%; 
+            transform: translateX(-50%);
+            display: none; pointer-events: none; 
+            background: rgba(10, 12, 18, 0.85); 
+            padding: 10px 40px; 
+            border-radius: 3px; 
+            border-bottom: 4px solid #de9b35;
+            display: none;
+            gap: 60px;
+            align-items: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
         }
+        .hud-item { font-size: 28px; font-weight: 900; letter-spacing: 1px; }
+        .hud-label { font-size: 10px; color: #888; text-transform: uppercase; display: block; margin-bottom: -2px; font-weight: bold; }
     </style>
+
+    <script src="https://gstatic.com"></script>
+    <script src="https://gstatic.com"></script>
 </head>
 <body>
 
-    <!-- Головне меню гри КС 1001 -->
+    <!-- Главное Меню КС 1001 -->
     <div id="menu">
-        <h1>CS 1001</h1>
-        <p style="color: #888; margin-top: 0;">Multiplayer 3D Shooter</p>
+        <div class="logo-area">
+            <h1>COUNTER-STRIKE</h1>
+            <div class="subtitle">VERSION 1001</div>
+        </div>
         
-        <div class="menu-block">
-            <h3>Account & Server</h3>
-            <input type="text" id="nickname" value="Player_1001" placeholder="Your nickname">
-            <select id="serverSelect">
-                <option value="http://localhost:3000">Local Server (Test with friend)</option>
-            </select>
-        </div>
+        <div class="cs-panel">
+            <h3>Player Profile</h3>
+            <div id="user-info">WELCOME, <span id="username-display"></span>!</div>
+            <button id="googleLoginBtn" class="google-btn">
+                <img src="https://wikimedia.org" width="16" height="16" alt="G">
+                Sign in with Google
+            </button>
+            <div id="auth-status">Status: Authentication Required</div>
 
-        <div class="menu-block">
-            <h3>Gun Skins</h3>
-            <select id="weaponSkin">
-                <option value="0x777777">Default Metal</option>
-                <option value="0xffd700">Golden Asimov</option>
-                <option value="0xff00ff">Neon Gradient</option>
-                <option value="0x00ffff">Quantum Ice</option>
-            </select>
-        </div>
+            <h3 style="margin-top: 25px;">Inventory & Match</h3>
+            <div class="input-group">
+                <label>Weapon Finish (Skin)</label>
+                <select id="weaponSkin">
+                    <option value="0x222222">Default Carbon</option>
+                    <option value="0xffd700">Asimov Gold</option>
+                    <option value="0xff00ff">Neon Fade</option>
+                    <option value="0x00ffff">Quantum Ice</option>
+                </select>
+            </div>
 
-        <button id="connectBtn" style="width: 340px; font-size: 20px; padding: 15px;">CONNECT & PLAY</button>
+            <div class="input-group">
+                <label>Select Server</label>
+                <select id="serverSelect">
+                    <option value="http://localhost:3000">Europe Local Engine (:3000)</option>
+                </select>
+            </div>
+
+            <button id="connectBtn" disabled>START MATCH</button>
+        </div>
     </div>
 
-    <!-- Приціл по центру екрана -->
+    <!-- Зеленый прицел КС -->
     <div id="crosshair"></div>
     
-    <!-- Інтерфейс під час матчу -->
+    <!-- Нижний HUD в стиле CS:GO (Здоровье и Фраги по центру) -->
     <div id="hud">
-        <div>Name: <span id="hud-name"></span></div>
-        <div>Online: <span id="hud-online">1</span> players</div>
+        <div class="hud-item" style="color: #ff3b30;">
+            <span class="hud-label">Health</span>
+            + <span id="hud-hp">100</span>
+        </div>
+        <div class="hud-item" style="color: #de9b35;">
+            <span class="hud-label">Kills</span>
+            <span id="hud-kills">0</span>
+        </div>
+        <div class="hud-item" style="color: #ffffff;">
+            <span class="hud-label">Operator</span>
+            <span id="hud-name" style="font-size: 18px; font-weight: bold;">Guest</span>
+        </div>
     </div>
 
-    <!-- Правильне локальне підключення Three.js для Electron -->
-    <script src="node_modules/three/build/three.min.js"></script>
-    
-    <!-- Логіка самої 3D гри -->
+    <!-- Подключение 3D-движка с GitHub Pages через CDN, чтобы не таскать папки -->
+    <script src="https://cloudflare.com"></script>
+    <script>
+        // Инициализация Firebase (Сюда вставишь свои ключи из консоли Firebase)
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+        firebase.initializeApp(firebaseConfig);
+
+        const io = require('socket.io-client');
+    </script>
     <script src="game.js"></script>
 </body>
 </html>
