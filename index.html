@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>CS 1001 - Online Shooter</title>
+    <style>
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            background-color: #111; 
+            font-family: 'Arial', sans-serif; 
+            color: white; 
+        }
+        #menu {
+            position: absolute; 
+            width: 100%; 
+            height: 100%; 
+            background: rgba(20, 20, 20, 0.95);
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            z-index: 100;
+        }
+        .menu-block { 
+            background: #222; 
+            padding: 20px; 
+            border-radius: 10px; 
+            border: 2px solid #e0a905; 
+            margin: 10px; 
+            width: 300px; 
+            text-align: center; 
+        }
+        h1 { 
+            color: #e0a905; 
+            text-shadow: 3px 3px 0px #000; 
+            font-size: 42px; 
+            margin-bottom: 5px; 
+        }
+        input, select, button { 
+            width: 100%; 
+            padding: 10px; 
+            margin: 8px 0; 
+            border-radius: 5px; 
+            border: none; 
+            font-size: 16px; 
+            box-sizing: border-box; 
+        }
+        input, select { 
+            background: #333; 
+            color: white; 
+            border: 1px solid #555; 
+        }
+        button { 
+            background: #5c8e32; 
+            color: white; 
+            font-weight: bold; 
+            cursor: pointer; 
+            transition: 0.2s; 
+        }
+        button:hover { 
+            background: #73b23e; 
+        }
+        #crosshair {
+            position: absolute; 
+            top: 50%; 
+            left: 50%; 
+            width: 12px; 
+            height: 12px;
+            border: 2px solid #00ff00; 
+            border-radius: 50%; 
+            transform: translate(-50%, -50%);
+            pointer-events: none; 
+            z-index: 10; 
+            display: none;
+        }
+        #hud { 
+            position: absolute; 
+            top: 20px; 
+            left: 20px; 
+            font-size: 20px; 
+            font-weight: bold; 
+            z-index: 10; 
+            display: none; 
+            pointer-events: none; 
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Головне меню гри КС 1001 -->
+    <div id="menu">
+        <h1>CS 1001</h1>
+        <p style="color: #888; margin-top: 0;">Multiplayer 3D Shooter</p>
+        
+        <div class="menu-block">
+            <h3>Account & Server</h3>
+            <input type="text" id="nickname" value="Player_1001" placeholder="Your nickname">
+            <select id="serverSelect">
+                <option value="http://localhost:3000">Local Server (Test with friend)</option>
+            </select>
+        </div>
+
+        <div class="menu-block">
+            <h3>Gun Skins</h3>
+            <select id="weaponSkin">
+                <option value="0x777777">Default Metal</option>
+                <option value="0xffd700">Golden Asimov</option>
+                <option value="0xff00ff">Neon Gradient</option>
+                <option value="0x00ffff">Quantum Ice</option>
+            </select>
+        </div>
+
+        <button id="connectBtn" style="width: 340px; font-size: 20px; padding: 15px;">CONNECT & PLAY</button>
+    </div>
+
+    <!-- Приціл по центру екрана -->
+    <div id="crosshair"></div>
+    
+    <!-- Інтерфейс під час матчу -->
+    <div id="hud">
+        <div>Name: <span id="hud-name"></span></div>
+        <div>Online: <span id="hud-online">1</span> players</div>
+    </div>
+
+    <!-- Правильне локальне підключення Three.js для Electron -->
+    <script src="node_modules/three/build/three.min.js"></script>
+    
+    <!-- Логіка самої 3D гри -->
+    <script src="game.js"></script>
+</body>
+</html>
